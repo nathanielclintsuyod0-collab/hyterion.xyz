@@ -317,3 +317,581 @@ footer span { color: var(--purple); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+
+/* ==========================================
+   SERAPHYX FINANCE — LAYOUT REPAIR
+   Append this to the END of style.css
+   ========================================== */
+
+html {
+  font-size: 14px;
+  zoom: 1;
+}
+
+body {
+  min-width: 320px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-shell {
+  display: grid !important;
+  grid-template-columns: 248px minmax(0, 1fr);
+  align-items: stretch;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 248px;
+  min-width: 0;
+  height: 100vh;
+  min-height: 600px;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.main-content {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 34px clamp(18px, 3vw, 44px) 24px;
+  overflow: hidden;
+}
+
+.topbar {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 28px;
+  align-items: center;
+}
+
+.topbar > div:first-child {
+  min-width: 0;
+}
+
+.topbar h1 {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.page {
+  display: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.page.active {
+  display: block;
+}
+
+.page[hidden],
+.admin-only[hidden],
+.modal-backdrop[hidden],
+[hidden] {
+  display: none !important;
+}
+
+/* Dashboard banner */
+.welcome-panel {
+  width: 100%;
+  min-height: 170px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.welcome-panel > div:first-child {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.welcome-panel h2 {
+  line-height: 1.25;
+}
+
+.welcome-panel p {
+  line-height: 1.7;
+}
+
+/* Four dashboard summary cards */
+.stats-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 145px;
+  padding: 20px;
+  overflow-wrap: anywhere;
+}
+
+.stat-top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stat-value {
+  display: block;
+  margin: 17px 0 8px;
+  font-size: clamp(18px, 1.6vw, 27px);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.stat-card p {
+  line-height: 1.6;
+}
+
+/* Recent activity and snapshot */
+.content-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  align-items: stretch;
+  gap: 18px;
+  width: 100%;
+}
+
+.content-grid > .panel {
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 10px;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.snapshot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.snapshot-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.snapshot-copy strong,
+.snapshot-copy small {
+  display: block;
+  line-height: 1.5;
+}
+
+.snapshot-row > strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.snapshot-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  line-height: 1.6;
+}
+
+/* Transaction forms and filters */
+.form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px;
+}
+
+.form-grid > label,
+.settings-panel > label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  border-radius: 10px;
+}
+
+textarea {
+  min-height: 90px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.toolbar label {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 150px;
+  gap: 7px;
+}
+
+.toolbar > input[type="search"] {
+  flex: 1 1 200px;
+  width: auto;
+}
+
+.toolbar select {
+  flex: 1 1 145px;
+  width: auto;
+}
+
+.section-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-intro > div {
+  min-width: 0;
+}
+
+button {
+  line-height: 1.4;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  min-height: 42px;
+  white-space: normal;
+}
+
+/* Admin portal — force a clean, vertical login form */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  background: rgba(5, 3, 9, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.login-card {
+  display: block;
+  position: relative;
+  width: min(100%, 430px);
+  max-width: 430px;
+  max-height: calc(100vh - 40px);
+  margin: auto;
+  padding: 32px;
+  overflow-y: auto;
+  border-radius: 22px;
+  background: #181025;
+  box-shadow: 0 25px 100px rgba(0, 0, 0, 0.55);
+}
+
+.login-card > * {
+  max-width: 100%;
+}
+
+.login-card .login-emblem {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 20px;
+}
+
+.login-card h2 {
+  margin: 8px 0 10px;
+  font-size: 30px;
+  line-height: 1.25;
+}
+
+.login-card > p {
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* One field per row; prevent labels and inputs from overlapping */
+.login-card form#loginForm {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch;
+  gap: 17px;
+  width: 100%;
+  margin-top: 22px;
+}
+
+.login-card form#loginForm > label {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  color: #e3d3f4;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-card form#loginForm input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0;
+  height: 46px;
+  margin: 0;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+.login-card .login-submit {
+  display: flex;
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+}
+
+.login-card .login-error {
+  margin: 0;
+  color: #ff8fba;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-card .login-footnote {
+  display: block;
+  margin-top: 20px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.modal-close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(213, 181, 244, 0.2);
+  border-radius: 10px;
+  font-size: 17px;
+}
+
+/* Reports and settings */
+.breakdown-list {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.breakdown-item {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.8fr) minmax(60px, 2fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.breakdown-item > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.settings-panel > label {
+  width: min(100%, 460px);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Smaller screens */
+@media (max-width: 1200px) {
+  .app-shell {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 220px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell {
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: relative;
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    padding: 15px;
+    overflow: visible;
+  }
+
+  .brand {
+    padding-bottom: 15px;
+  }
+
+  .navigation {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .nav-link {
+    flex: 0 0 auto;
+  }
+
+  .sidebar-bottom {
+    display: none;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 22px 14px;
+    overflow: visible;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .topbar h1 {
+    font-size: 27px;
+  }
+
+  .welcome-panel {
+    min-height: 150px;
+    padding: 22px 18px;
+  }
+
+  .welcome-art {
+    font-size: 48px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .stat-card {
+    min-height: 130px;
+    padding: 14px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .stat-label {
+    font-size: 8px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-grid > .full-width {
+    grid-column: auto;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 390px;
+    padding: 27px 22px;
+  }
+}
+
+@media (max-width: 380px) {
+  .stats-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .welcome-art {
+    display: none;
+  }
+
+  .topbar-right {
+    display: none;
+  }
+}
+
