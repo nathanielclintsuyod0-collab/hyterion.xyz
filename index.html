@@ -4,382 +4,308 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#100c16">
+  <meta name="theme-color" content="#10091c">
   <title>Seraphyx Finance</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
-
-  <aside class="sidebar">
-    <a href="#" class="brand">
-      <span class="brand-icon">✦</span>
-      <span>SERAPHYX<small>FINANCE</small></span>
-    </a>
-
-    <p class="nav-label">WORKSPACE</p>
-
-    <nav>
-      <button class="nav-link active" data-page="dashboard">◈ Dashboard</button>
-      <button class="nav-link admin-only" data-page="transactions" hidden>↔ Transactions</button>
-      <button class="nav-link admin-only" data-page="reports" hidden>▤ Reports</button>
-      <button class="nav-link admin-only" data-page="settings" hidden>⚙ Settings</button>
-    </nav>
-
-    <div class="sidebar-bottom">
-      <span class="status-dot"></span>
-      <div>
-        <strong>Finance overview</strong>
-        <small>PHP · Local workspace</small>
-      </div>
-    </div>
-  </aside>
-
-  <main class="main">
-    <header class="topbar">
-      <div>
-        <span class="eyebrow">SERAPHYX SMP / FINANCIALS</span>
-        <h1 id="pageTitle">Public Dashboard</h1>
-        <p id="pageSubtitle">A clear overview of server finances.</p>
-      </div>
-
-      <div class="top-actions">
-        <span id="sessionBadge" class="session-badge">PUBLIC VIEW</span>
-        <button id="loginOpen" class="button primary">Admin login ↗</button>
-        <button id="logoutButton" class="button secondary" hidden>Log out</button>
-      </div>
-    </header>
-
-    <!-- PUBLIC DASHBOARD -->
-    <section class="page active" id="dashboard">
-      <div class="section-heading">
-        <div>
-          <h2>Financial snapshot</h2>
-          <p>Summary of recorded income, costs, and refunds.</p>
-        </div>
-        <span id="currentDate" class="date-pill"></span>
-      </div>
-
-      <div class="stat-grid">
-        <article class="stat-card">
-          <span>Total income</span>
-          <strong id="dashIncome">₱0.00</strong>
-          <small>Income and received refunds</small>
-        </article>
-
-        <article class="stat-card">
-          <span>Total expenses</span>
-          <strong id="dashExpenses">₱0.00</strong>
-          <small>Purchases and operating expenses</small>
-        </article>
-
-        <article class="stat-card">
-          <span>Net result</span>
-          <strong id="dashNet">₱0.00</strong>
-          <small>Income less costs and refunds issued</small>
-        </article>
-
-        <article class="stat-card">
-          <span>Transactions</span>
-          <strong id="dashCount">0</strong>
-          <small id="dashRefundCount">0 refunds issued</small>
-        </article>
-      </div>
-
-      <div class="content-grid">
-        <article class="panel">
-          <div class="panel-heading">
-            <div>
-              <h3>Income vs expenses</h3>
-              <p>Summary of the finance ledger</p>
-            </div>
-            <span class="chip">OVERVIEW</span>
-          </div>
-
-          <div class="metric-line">
-            <span>🟢 Income</span>
-            <strong id="barIncomeLabel">₱0.00</strong>
-          </div>
-          <div class="meter"><span id="barIncome"></span></div>
-
-          <div class="metric-line">
-            <span>🔴 Costs</span>
-            <strong id="barExpensesLabel">₱0.00</strong>
-          </div>
-          <div class="meter"><span id="barExpenses" class="red"></span></div>
-
-          <div class="metric-line">
-            <span>🟡 Refunds issued</span>
-            <strong id="barRefundsLabel">₱0.00</strong>
-          </div>
-          <div class="meter"><span id="barRefunds" class="gold"></span></div>
-
-          <div class="net-box">
-            <span>Net financial result</span>
-            <strong id="overviewNet">₱0.00</strong>
-          </div>
-        </article>
-
-        <article class="panel">
-          <div class="panel-heading">
-            <div>
-              <h3>At a glance</h3>
-              <p>Current ledger status</p>
-            </div>
-            <span class="sparkle">✦</span>
-          </div>
-
-          <div class="glance-row"><span>Income entries</span><strong id="incomeCount">0</strong></div>
-          <div class="glance-row"><span>Cost entries</span><strong id="expenseCount">0</strong></div>
-          <div class="glance-row"><span>Refunds issued</span><strong id="refundAmount">₱0.00</strong></div>
-          <div class="glance-row"><span>Last activity</span><strong id="lastActivity">None</strong></div>
-
-          <div class="notice">
-            Public view displays financial summaries and recent transaction descriptions.
-            Avoid recording private customer information in descriptions.
-          </div>
-        </article>
-      </div>
-
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <h3>Recent transactions</h3>
-            <p>Latest six recorded entries</p>
-          </div>
-          <span class="chip">LATEST</span>
-        </div>
-
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr><th>DATE</th><th>DESCRIPTION</th><th>TYPE</th><th>AMOUNT</th></tr>
-            </thead>
-            <tbody id="recentRows"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <!-- ADMIN TRANSACTIONS -->
-    <section class="page admin-only" id="transactions" hidden>
-      <div class="section-heading">
-        <div>
-          <h2>Transaction ledger</h2>
-          <p>Add, edit, search, and remove financial records.</p>
-        </div>
-        <button class="button primary" id="newTransaction">＋ New transaction</button>
-      </div>
-
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <h3 id="formHeading">Add transaction</h3>
-            <p>All amounts are in Philippine pesos.</p>
-          </div>
-        </div>
-
-        <form id="transactionForm" class="form-grid">
-          <input id="recordId" type="hidden">
-
-          <div class="field">
-            <label for="type">Transaction type *</label>
-            <select id="type" required>
-              <option value="income">Income / Sale</option>
-              <option value="purchase">Purchase</option>
-              <option value="expense">Operating expense</option>
-              <option value="refund">Refund issued</option>
-              <option value="refund_received">Refund received</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="date">Date *</label>
-            <input id="date" type="date" required>
-          </div>
-
-          <div class="field wide">
-            <label for="description">Description *</label>
-            <input id="description" maxlength="140" required placeholder="e.g. Monthly server hosting">
-          </div>
-
-          <div class="field">
-            <label for="category">Category *</label>
-            <select id="category" required></select>
-          </div>
-
-          <div class="field">
-            <label for="amount">Amount (PHP) *</label>
-            <input id="amount" type="number" min="0.01" step="0.01" required placeholder="0.00">
-          </div>
-
-          <div class="field">
-            <label for="vendor">Customer / supplier</label>
-            <input id="vendor" maxlength="100" placeholder="Optional">
-          </div>
-
-          <div class="field">
-            <label for="reference">Reference ID</label>
-            <input id="reference" maxlength="100" placeholder="Receipt or order ID">
-          </div>
-
-          <div class="field">
-            <label for="payment">Payment method</label>
-            <select id="payment">
-              <option>GCash</option>
-              <option>Bank transfer</option>
-              <option>Cash</option>
-              <option>PayPal</option>
-              <option>Other</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="quantity">Quantity</label>
-            <input id="quantity" type="number" min="1" value="1">
-          </div>
-
-          <div class="field wide">
-            <label for="notes">Notes</label>
-            <textarea id="notes" rows="2" maxlength="1000" placeholder="Optional notes"></textarea>
-          </div>
-
-          <div class="form-actions wide">
-            <button type="submit" class="button primary">Save transaction</button>
-            <button type="button" id="cancelForm" class="button secondary">Clear form</button>
-          </div>
-        </form>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading">
-          <div>
-            <h3>All transactions</h3>
-            <p>Search and filter the ledger.</p>
-          </div>
-          <button id="exportCsv" class="button secondary">Export CSV ↓</button>
-        </div>
-
-        <div class="filters">
-          <input id="searchLedger" placeholder="Search descriptions, vendors, IDs…">
-          <select id="filterType">
-            <option value="">All types</option>
-            <option value="income">Income</option>
-            <option value="purchase">Purchases</option>
-            <option value="expense">Expenses</option>
-            <option value="refund">Refunds issued</option>
-            <option value="refund_received">Refunds received</option>
-          </select>
-          <input id="filterFrom" type="date" aria-label="Start date">
-          <input id="filterTo" type="date" aria-label="End date">
-        </div>
-
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>DATE</th><th>DESCRIPTION</th><th>TYPE</th><th>CATEGORY</th><th>AMOUNT</th><th>ACTIONS</th></tr></thead>
-            <tbody id="ledgerRows"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <!-- REPORTS -->
-    <section class="page admin-only" id="reports" hidden>
-      <div class="section-heading">
-        <div><h2>Financial reports</h2><p>Analyze records over a selected period.</p></div>
-        <button id="reportCsv" class="button secondary">Export report ↓</button>
-      </div>
-
-      <article class="panel">
-        <div class="filters report-filters">
-          <div class="field"><label for="reportFrom">Start date</label><input id="reportFrom" type="date"></div>
-          <div class="field"><label for="reportTo">End date</label><input id="reportTo" type="date"></div>
-          <div class="field"><label for="reportType">Transaction type</label>
-            <select id="reportType">
-              <option value="">All types</option>
-              <option value="income">Income</option>
-              <option value="purchase">Purchases</option>
-              <option value="expense">Expenses</option>
-              <option value="refund">Refunds issued</option>
-              <option value="refund_received">Refunds received</option>
-            </select>
-          </div>
-          <button id="generateReport" class="button primary">Generate report</button>
-        </div>
-
-        <div class="stat-grid">
-          <article class="stat-card"><span>Income</span><strong id="reportIncome">₱0.00</strong></article>
-          <article class="stat-card"><span>Costs</span><strong id="reportExpenses">₱0.00</strong></article>
-          <article class="stat-card"><span>Refunds issued</span><strong id="reportRefunds">₱0.00</strong></article>
-          <article class="stat-card"><span>Net result</span><strong id="reportNet">₱0.00</strong></article>
-        </div>
-
-        <div class="table-scroll">
-          <table>
-            <thead><tr><th>MONTH</th><th>INCOME</th><th>COSTS</th><th>REFUNDS</th><th>NET</th></tr></thead>
-            <tbody id="reportRows"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <!-- SETTINGS -->
-    <section class="page admin-only" id="settings" hidden>
-      <div class="section-heading"><div><h2>Admin settings</h2><p>Back up your ledger and configure optional alerts.</p></div></div>
-
-      <article class="panel">
-        <div class="panel-heading"><div><h3>Discord notifications</h3><p>Optional webhook alert when a transaction is created.</p></div></div>
-        <div class="notice">
-          Warning: a webhook URL is a secret. This demo stores it in your browser.
-          A production website should send notifications from a server, not directly from the browser.
-        </div>
-        <form id="discordForm" class="form-grid">
-          <div class="field wide"><label for="webhook">Discord webhook URL</label><input id="webhook" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/…"></div>
-          <div class="field wide"><label class="checkbox-label"><input id="discordEnabled" type="checkbox"> Enable new transaction notifications</label></div>
-          <div class="form-actions wide"><button class="button primary" type="submit">Save settings</button><button class="button secondary" id="testWebhook" type="button">Send test</button></div>
-        </form>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading"><div><h3>Data management</h3><p>Download or restore your finance data.</p></div></div>
-        <div class="button-row">
-          <button id="backupJson" class="button secondary">Download JSON backup</button>
-          <button id="restoreJson" class="button secondary">Import JSON backup</button>
-          <input id="restoreFile" type="file" accept=".json,application/json" hidden>
-          <button id="deleteAll" class="button danger">Delete all records</button>
-        </div>
-        <div class="notice">Records are saved in this browser only. They do not automatically sync across devices. Keep backups in a safe place.</div>
-      </article>
-    </section>
-
-    <footer>✦ SERAPHYX FINANCE <span>Server bookkeeping workspace</span></footer>
-  </main>
-
-  <!-- ADMIN LOGIN -->
-  <div class="modal-backdrop" id="loginModal" hidden>
-    <form class="login-card" id="loginForm">
-      <button type="button" class="modal-close" id="closeLogin" aria-label="Close">×</button>
-      <div class="login-emblem">✦</div>
-      <div class="eyebrow centered">RESTRICTED ACCESS</div>
-      <h2>Welcome back.</h2>
-      <p class="login-subtitle">Sign in to the Seraphyx admin workspace.</p>
-
-      <div class="field">
-        <label for="username">Username</label>
-        <input id="username" autocomplete="username" required placeholder="Enter username">
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input id="password" type="password" autocomplete="current-password" required placeholder="Enter password">
-      </div>
-      <p class="login-error" id="loginError" hidden>Incorrect username or password.</p>
-      <button type="submit" class="button primary login-submit">Sign in to admin <span>→</span></button>
-      <p class="login-footnote">Client-side demo · Not production authentication</p>
-    </form>
+  <!-- Animated background -->
+  <div class="background-effects" aria-hidden="true">
+    <div class="glow glow-one"></div>
+    <div class="glow glow-two"></div>
+    <div class="glow glow-three"></div>
+    <div id="particles"></div>
+    <div id="floatingEmojis"></div>
   </div>
 
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" data-page="dashboard">
+        <span class="brand-icon">✦</span>
+        <span>
+          <strong>SERAPHYX</strong>
+          <small>FINANCE CENTER</small>
+        </span>
+      </a>
+
+      <div class="sidebar-label">WORKSPACE</div>
+      <nav class="navigation">
+        <button class="nav-link active" data-page="dashboard">📊 <span>Dashboard</span></button>
+        <button class="nav-link admin-only" data-page="transactions" hidden>🧾 <span>Transactions</span></button>
+        <button class="nav-link admin-only" data-page="reports" hidden>📈 <span>Reports</span></button>
+        <button class="nav-link admin-only" data-page="settings" hidden>⚙️ <span>Settings</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="status-card">
+          <span class="status-dot"></span>
+          <div>
+            <strong id="accessStatus">Public View</strong>
+            <small id="accessDescription">Read-only dashboard</small>
+          </div>
+        </div>
+        <button class="admin-button" id="adminBtn">🔐 Admin Login</button>
+        <button class="admin-button logout-button" id="logoutBtn" hidden>🚪 Log Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">SERAPHYX SMP ✦ FINANCIAL OVERVIEW</div>
+          <h1 id="pageTitle">Dashboard <span>✨</span></h1>
+          <p id="pageSubtitle">Your server finances, beautifully organized.</p>
+        </div>
+        <div class="topbar-right">
+          <span class="live-pill"><span class="status-dot"></span> Local data</span>
+          <div class="avatar">S✦</div>
+        </div>
+      </header>
+
+      <div class="notice" id="notice" role="status" hidden></div>
+
+      <!-- Dashboard -->
+      <section class="page active" id="dashboard">
+        <div class="welcome-panel glass">
+          <div>
+            <span class="welcome-tag">✦ YOUR FINANCIAL HUB</span>
+            <h2>Welcome to <span>Seraphyx</span></h2>
+            <p>Track every transaction. Keep your finances crystal clear. 💜</p>
+          </div>
+          <div class="welcome-art" aria-hidden="true">💎</div>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card glass">
+            <div class="stat-top"><span>💰</span><span class="stat-label">TOTAL INCOME</span></div>
+            <div class="stat-value" id="dashIncome">₱0.00</div>
+            <p>Income and received refunds</p>
+          </article>
+          <article class="stat-card glass">
+            <div class="stat-top"><span>💸</span><span class="stat-label">TOTAL OUTGOING</span></div>
+            <div class="stat-value" id="dashOutgoing">₱0.00</div>
+            <p>Purchases, expenses and refunds</p>
+          </article>
+          <article class="stat-card glass">
+            <div class="stat-top"><span>✨</span><span class="stat-label">NET BALANCE</span></div>
+            <div class="stat-value" id="dashNet">₱0.00</div>
+            <p>Income minus outgoing funds</p>
+          </article>
+          <article class="stat-card glass">
+            <div class="stat-top"><span>🧾</span><span class="stat-label">TRANSACTIONS</span></div>
+            <div class="stat-value" id="dashCount">0</div>
+            <p>Recorded financial activities</p>
+          </article>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel glass">
+            <div class="panel-heading">
+              <div><h3>🕒 Recent Activity</h3><p>Your latest recorded transactions</p></div>
+              <button class="text-button admin-only" data-page="transactions" hidden>View ledger →</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Transaction</th><th>Category</th><th>Date</th><th class="align-right">Amount</th></tr></thead>
+                <tbody id="recentRows"></tbody>
+              </table>
+            </div>
+            <div class="empty-state" id="recentEmpty">✨ No transactions yet.</div>
+          </section>
+
+          <section class="panel glass">
+            <div class="panel-heading">
+              <div><h3>🪄 Financial Snapshot</h3><p>Current recorded totals</p></div>
+            </div>
+            <div class="snapshot-row">
+              <span class="snapshot-icon">📈</span>
+              <div class="snapshot-copy"><strong>Income</strong><small>Money received</small></div>
+              <strong id="snapshotIncome">₱0.00</strong>
+            </div>
+            <div class="snapshot-row">
+              <span class="snapshot-icon">🛍️</span>
+              <div class="snapshot-copy"><strong>Purchases</strong><small>Items and services</small></div>
+              <strong id="snapshotPurchases">₱0.00</strong>
+            </div>
+            <div class="snapshot-row">
+              <span class="snapshot-icon">🧰</span>
+              <div class="snapshot-copy"><strong>Other expenses</strong><small>Operating costs and refunds</small></div>
+              <strong id="snapshotExpenses">₱0.00</strong>
+            </div>
+            <div class="snapshot-footer"><span>Net balance</span><strong id="snapshotNet">₱0.00</strong></div>
+          </section>
+        </div>
+        <p class="privacy-note">🔒 Dashboard data is stored in this browser. It is not a live bank balance.</p>
+      </section>
+
+      <!-- Transactions -->
+      <section class="page admin-only" id="transactions" hidden>
+        <div class="section-intro">
+          <div><h2>🧾 Transaction Ledger</h2><p>Record, update and manage financial activity.</p></div>
+          <button class="primary-button" id="newTransactionBtn">＋ New Transaction</button>
+        </div>
+
+        <section class="panel glass form-panel" id="transactionEditor" hidden>
+          <div class="panel-heading">
+            <div><h3 id="formTitle">✨ Add transaction</h3><p>Enter the details below.</p></div>
+            <button class="icon-button" id="cancelTransactionBtn" aria-label="Close form">✕</button>
+          </div>
+          <form id="transactionForm">
+            <input type="hidden" id="recordId">
+            <div class="form-grid">
+              <label>Transaction type
+                <select id="type" required>
+                  <option value="income">💰 Income</option>
+                  <option value="purchase">🛍️ Purchase</option>
+                  <option value="expense">💸 Expense</option>
+                  <option value="refund">↩️ Refund paid</option>
+                  <option value="refund_received">✨ Refund received</option>
+                </select>
+              </label>
+              <label>Date <input type="date" id="date" required></label>
+              <label>Description <input id="description" maxlength="120" placeholder="e.g. Hosting renewal" required></label>
+              <label>Category
+                <input id="category" maxlength="60" placeholder="e.g. Hosting, Store, Donation" required>
+              </label>
+              <label>Amount (<span class="currencyLabel">PHP</span>)
+                <input type="number" id="amount" min="0.01" step="0.01" placeholder="0.00" required>
+              </label>
+              <label>Vendor / Source <input id="vendor" maxlength="100" placeholder="Optional"></label>
+              <label>Reference number <input id="reference" maxlength="100" placeholder="Optional"></label>
+              <label>Payment method
+                <select id="payment">
+                  <option value="Not specified">Not specified</option>
+                  <option>GCash</option><option>Bank transfer</option>
+                  <option>PayPal</option><option>Cash</option><option>Card</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>Quantity (optional) <input type="number" id="quantity" min="1" step="1" placeholder="1"></label>
+              <label class="full-width">Notes <textarea id="notes" rows="3" maxlength="1000" placeholder="Additional details..."></textarea></label>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="secondary-button" id="discardBtn">Cancel</button>
+              <button type="submit" class="primary-button">💾 Save Transaction</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel glass">
+          <div class="toolbar">
+            <input type="search" id="ledgerSearch" placeholder="🔎 Search transactions...">
+            <select id="ledgerType">
+              <option value="all">All types</option><option value="income">Income</option>
+              <option value="purchase">Purchases</option><option value="expense">Expenses</option>
+              <option value="refund">Refunds paid</option><option value="refund_received">Refunds received</option>
+            </select>
+            <button class="secondary-button" id="exportCsvBtn">📥 Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th class="align-right">Amount</th><th>Actions</th></tr></thead>
+              <tbody id="ledgerRows"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="ledgerEmpty">🧾 No matching transactions.</div>
+        </section>
+      </section>
+
+      <!-- Reports -->
+      <section class="page admin-only" id="reports" hidden>
+        <div class="section-intro">
+          <div><h2>📈 Financial Reports</h2><p>Explore totals for a selected date range.</p></div>
+          <button class="secondary-button" id="reportCsvBtn">📥 Export Report CSV</button>
+        </div>
+        <section class="panel glass">
+          <div class="toolbar">
+            <label>From <input type="date" id="reportFrom"></label>
+            <label>To <input type="date" id="reportTo"></label>
+            <button class="primary-button" id="runReportBtn">✨ Apply filters</button>
+            <button class="secondary-button" id="clearReportBtn">Clear</button>
+          </div>
+        </section>
+        <div class="stats-grid report-stats">
+          <article class="stat-card glass"><div class="stat-top"><span>💰</span><span class="stat-label">INCOME</span></div><div class="stat-value" id="reportIncome">₱0.00</div></article>
+          <article class="stat-card glass"><div class="stat-top"><span>💸</span><span class="stat-label">OUTGOING</span></div><div class="stat-value" id="reportOutgoing">₱0.00</div></article>
+          <article class="stat-card glass"><div class="stat-top"><span>💎</span><span class="stat-label">NET</span></div><div class="stat-value" id="reportNet">₱0.00</div></article>
+          <article class="stat-card glass"><div class="stat-top"><span>🧾</span><span class="stat-label">RECORDS</span></div><div class="stat-value" id="reportCount">0</div></article>
+        </div>
+        <section class="panel glass">
+          <div class="panel-heading"><div><h3>📊 Category Breakdown</h3><p>Outgoing totals by category</p></div></div>
+          <div id="categoryBreakdown" class="breakdown-list"></div>
+          <div class="empty-state" id="breakdownEmpty">No report data for this range.</div>
+        </section>
+      </section>
+
+      <!-- Settings -->
+      <section class="page admin-only" id="settings" hidden>
+        <div class="section-intro"><div><h2>⚙️ Settings</h2><p>Manage display preferences and backups.</p></div></div>
+        <section class="panel glass settings-panel">
+          <h3>💱 Currency preferences</h3>
+          <p>Choose how amounts appear on your dashboard.</p>
+          <label>Currency
+            <select id="currency">
+              <option value="PHP">PHP — Philippine Peso (₱)</option>
+              <option value="USD">USD — US Dollar ($)</option>
+              <option value="EUR">EUR — Euro (€)</option>
+              <option value="SGD">SGD — Singapore Dollar (S$)</option>
+            </select>
+          </label>
+          <button class="primary-button" id="saveSettingsBtn">💾 Save Settings</button>
+        </section>
+
+        <section class="panel glass settings-panel">
+          <h3>💾 Data backup</h3>
+          <p>Export your records as a JSON backup or restore a previous backup.</p>
+          <div class="settings-actions">
+            <button class="secondary-button" id="backupBtn">📤 Download Backup</button>
+            <label class="secondary-button file-button">📥 Restore Backup
+              <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel glass settings-panel">
+          <h3>🔔 Discord notifications (optional)</h3>
+          <p>Send a notification when a transaction is saved. Do not use a browser-stored webhook for sensitive information; anyone who can access this page may be able to retrieve it.</p>
+          <label>Discord webhook URL
+            <input type="url" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+          </label>
+          <button class="primary-button" id="saveWebhookBtn">💾 Save Webhook</button>
+        </section>
+        <section class="panel glass danger-panel">
+          <h3>🧨 Danger zone</h3>
+          <p>Deleting all records cannot be undone unless you have a backup.</p>
+          <button class="danger-button" id="clearRecordsBtn">🗑️ Delete All Transactions</button>
+        </section>
+      </section>
+
+      <footer>Made with 💜 for <strong>SERAPHYX SMP</strong> <span>✦</span> Finance Center</footer>
+    </main>
+  </div>
+
+  <!-- Login modal -->
+  <div class="modal-backdrop" id="loginModal" hidden>
+    <section class="login-card glass" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <button class="modal-close" id="closeLoginBtn" aria-label="Close login">✕</button>
+      <div class="login-emblem">🔐</div>
+      <div class="eyebrow">RESTRICTED ACCESS</div>
+      <h2 id="loginTitle">Admin <span>Portal</span></h2>
+      <p>Sign in to manage Seraphyx Finance.</p>
+      <form id="loginForm">
+        <label>Username
+          <input id="username" autocomplete="username" placeholder="Enter admin username" required>
+        </label>
+        <label>Password
+          <input id="password" type="password" autocomplete="current-password" placeholder="Enter password" required>
+        </label>
+        <p class="login-error" id="loginError" hidden>Incorrect username or password.</p>
+        <button class="primary-button login-submit" type="submit">✨ Sign In</button>
+      </form>
+      <small class="login-footnote">🔒 Demo login only. Use server-side authentication before public deployment.</small>
+    </section>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
