@@ -1,602 +1,959 @@
 
-(() => {
-  "use strict";
+"use strict";
 
-  // Demo-only credentials. These are visible to anyone who can view this source.
-  const ADMIN_USERNAME = "KnownAsNeo";
-  const ADMIN_PASSWORD = "natnat131309";
+/*
+ * SERAPHYX FINANCE
+ * Demo-only browser application.
+ *
+ * IMPORTANT:
+ * This demo uses browser localStorage and client-side credentials.
+ * Do not deploy it publicly with real financial or confidential data.
+ * Production authentication and storage should run on a secure server.
+ */
 
-  const STORAGE_KEY = "seraphyx.finance.records.v1";
-  const SETTINGS_KEY = "seraphyx.finance.settings.v1";
+// Change these demo credentials before testing.
+const ADMIN_USERNAME = "KnownAsNeo";
+const ADMIN_PASSWORD = "ChangeMe123!";
 
-  const $ = id => document.getElementById(id);
+const RECORDS_KEY = "seraphyx.finance.records.v2";
+const SETTINGS_KEY = "seraphyx.finance.settings.v2";
 
-  const TYPES = {
-    income: "Income",
-    purchase: "Purchase",
-    expense: "Expense",
-    refund: "Refund issued",
-    refund_received: "Refund received"
-  };
+const $ = (id) => document.getElementById(id);
 
-  const CATEGORIES = {
-    income: ["Store sales", "Rank sales", "Donations", "Services", "Other income"],
-    purchase: ["Plugins", "Goods", "Hosting", "Advertising", "Development", "Equipment", "Other purchase"],
-    expense: ["Server hosting", "Domain", "Advertising", "Development", "Staff", "Software", "Other expense"],
-    refund: ["Store refund", "Purchase refund", "Service refund", "Other refund"],
-    refund_received: ["Supplier refund", "Payment reversal", "Other refund received"]
-  };
+const TYPE_LABELS = {
+  income: "💰 Income",
+  purchase: "🛍️ Purchase",
+  expense: "💸 Expense",
+  refund: "↩️ Refund paid",
+  refund_received: "✨ Refund received"
+};
 
-  let isAdmin = false;
-  let records = loadRecords();
-  let settings = loadSettings();
-  let reportRecords = [];
-  let toastTimer;
+const TYPE_OPTIONS = {
+  income: "Income",
+  purchase: "Purchase",
+  expense: "Expense",
+  refund: "Refund paid",
+  refund_received: "Refund received"
+};
 
-  function loadRecords() {
-    try {
-      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      return Array.isArray(data) ? data.filter(validRecord) : [];
-    } catch {
-      return [];
-    }
+let isAdmin = false;
+let currentPage = "dashboard";
+let noticeTimer = null;
+
+let records = loadRecords();
+let settings = loadSettings();
+
+function loadRecords() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECORDS_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((r) =>
+      r && typeof r.id === "string" &&
+      typeof r.amount === "number" && Number.isFinite(r.amount) &&
+      Object.hasOwn(TYPE_LABELS, r.type)
+    );
+  } catch {
+    return [];
   }
+}
 
-  function validRecord(r) {
-    return !!r && typeof r.id === "string" && !!TYPES[r.type] &&
-      typeof r.date === "string" && typeof r.description === "string" &&
-      Number.isFinite(r.amount) && r.amount > 0;
+function loadSettings() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    const allowedCurrencies = ["PHP", "USD", "EUR", "SGD"];
+
+    return {
+      currency: allowedCurrencies.includes(parsed.currency)
+        ? parsed.currency : "PHP",
+      webhookUrl: typeof parsed.webhookUrl === "string"
+        ? parsed.webhookUrl : ""
+    };
+  } catch {
+    return { currency: "PHP", webhookUrl: "" };
   }
+}
 
-  function loadSettings() {
-    try {
-      const data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      return {
-        webhook: typeof data.webhook === "string" ? data.webhook : "",
-        enabled: data.enabled === true
-      };
-    } catch {
-      return { webhook: "", enabled: false };
-    }
+function saveRecords() {
+  try {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+    return true;
+  } catch {
+    showNotice("Unable to save data. Browser storage may be full or disabled.", true);
+    return false;
   }
+}
 
-  function saveRecords() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-      return true;
-    } catch {
-      toast("Could not save data. Browser storage may be full or disabled.");
-      return false;
-    }
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return true;
+  } catch {
+    showNotice("Unable to save settings in this browser.", true);
+    return false;
   }
+}
 
-  function saveSettings() {
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-      return true;
-    } catch {
-      toast("Could not save settings.");
-      return false;
-    }
-  }
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
 
-  function money(value) {
+function money(amount) {
+  try {
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
-      currency: "PHP"
-    }).format(value || 0);
+      currency: settings.currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  } catch {
+    return `${settings.currency} ${Number(amount).toFixed(2)}`;
   }
+}
 
-  function today() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
+function dateToday() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60000)
+    .toISOString().slice(0, 10);
+}
 
-  function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, ch => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[ch]);
-  }
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "—";
 
-  function toast(message) {
-    const node = $("toast");
-    node.textContent = message;
-    node.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => node.hidden = true, 3200);
-  }
-
-  function sum(types, list = records) {
-    return list.reduce((total, r) => total + (types.includes(r.type) ? r.amount : 0), 0);
-  }
-
-  function totals(list = records) {
-    const income = sum(["income", "refund_received"], list);
-    const costs = sum(["purchase", "expense"], list);
-    const refunds = sum(["refund"], list);
-    return { income, costs, refunds, net: income - costs - refunds };
-  }
-
-  function signedAmount(r) {
-    const positive = ["income", "refund_received"].includes(r.type);
-    return `${positive ? "+" : "−"}${money(r.amount)}`;
-  }
-
-  function render() {
-    renderDashboard();
-    renderLedger();
-    renderReport();
-  }
-
-  function renderDashboard() {
-    const t = totals();
-
-    $("dashIncome").textContent = money(t.income);
-    $("dashExpenses").textContent = money(t.costs);
-    $("dashNet").textContent = money(t.net);
-    $("dashNet").className = `stat-value ${t.net < 0 ? "amount-negative" : "amount-positive"}`;
-    $("dashCount").textContent = records.length;
-    $("dashRefundCount").textContent =
-      `${records.filter(r => r.type === "refund").length} refunds issued`;
-
-    $("barIncomeLabel").textContent = money(t.income);
-    $("barExpensesLabel").textContent = money(t.costs);
-    $("barRefundsLabel").textContent = money(t.refunds);
-    $("overviewNet").textContent = money(t.net);
-    $("overviewNet").style.color = t.net < 0 ? "var(--red)" : "var(--green)";
-
-    const max = Math.max(t.income, t.costs, t.refunds, 1);
-    $("barIncome").style.width = `${t.income / max * 100}%`;
-    $("barExpenses").style.width = `${t.costs / max * 100}%`;
-    $("barRefunds").style.width = `${t.refunds / max * 100}%`;
-
-    $("incomeCount").textContent =
-      records.filter(r => ["income", "refund_received"].includes(r.type)).length;
-    $("expenseCount").textContent =
-      records.filter(r => ["purchase", "expense"].includes(r.type)).length;
-    $("refundAmount").textContent = money(t.refunds);
-
-    const sorted = [...records].sort((a, b) =>
-      b.date.localeCompare(a.date) || (b.createdAt || 0) - (a.createdAt || 0)
-    );
-
-    $("lastActivity").textContent = sorted[0]?.date || "None";
-
-    $("recentRows").innerHTML = sorted.slice(0, 6).map(r => `
-      <tr>
-        <td>${escapeHtml(r.date)}</td>
-        <td>${escapeHtml(r.description)}</td>
-        <td><span class="type-pill">${TYPES[r.type]}</span></td>
-        <td class="${["income", "refund_received"].includes(r.type) ? "amount-positive" : "amount-negative"}">${signedAmount(r)}</td>
-      </tr>
-    `).join("") || `<tr><td colspan="4" class="empty-cell">No transactions recorded yet.</td></tr>`;
-  }
-
-  function filteredRecords() {
-    const query = $("searchLedger").value.trim().toLowerCase();
-    const type = $("filterType").value;
-    const from = $("filterFrom").value;
-    const to = $("filterTo").value;
-
-    return [...records].filter(r =>
-      (!query || [r.description, r.vendor, r.reference, r.category, r.notes]
-        .some(v => String(v || "").toLowerCase().includes(query))) &&
-      (!type || r.type === type) &&
-      (!from || r.date >= from) &&
-      (!to || r.date <= to)
-    ).sort((a, b) => b.date.localeCompare(a.date) ||
-      (b.createdAt || 0) - (a.createdAt || 0));
-  }
-
-  function renderLedger() {
-    const target = $("ledgerRows");
-    if (!target) return;
-
-    target.innerHTML = filteredRecords().map(r => `
-      <tr>
-        <td>${escapeHtml(r.date)}</td>
-        <td>${escapeHtml(r.description)}</td>
-        <td><span class="type-pill">${TYPES[r.type]}</span></td>
-        <td>${escapeHtml(r.category)}</td>
-        <td class="${["income", "refund_received"].includes(r.type) ? "amount-positive" : "amount-negative"}">${signedAmount(r)}</td>
-        <td><div class="row-actions">
-          <button class="mini-button" data-edit="${escapeHtml(r.id)}">Edit</button>
-          <button class="mini-button delete" data-delete="${escapeHtml(r.id)}">Delete</button>
-        </div></td>
-      </tr>
-    `).join("") || `<tr><td colspan="6" class="empty-cell">No matching transactions.</td></tr>`;
-  }
-
-  function renderReport() {
-    const from = $("reportFrom").value;
-    const to = $("reportTo").value;
-    const type = $("reportType").value;
-
-    reportRecords = records.filter(r =>
-      (!from || r.date >= from) &&
-      (!to || r.date <= to) &&
-      (!type || r.type === type)
-    );
-
-    const t = totals(reportRecords);
-    $("reportIncome").textContent = money(sum(["income", "refund_received"], reportRecords));
-    $("reportExpenses").textContent = money(t.costs);
-    $("reportRefunds").textContent = money(t.refunds);
-    $("reportNet").textContent = money(t.net);
-    $("reportNet").className = t.net < 0 ? "amount-negative" : "amount-positive";
-
-    const months = {};
-    reportRecords.forEach(r => {
-      if (!months[r.date.slice(0, 7)]) months[r.date.slice(0, 7)] = [];
-      months[r.date.slice(0, 7)].push(r);
-    });
-
-    $("reportRows").innerHTML = Object.keys(months).sort().reverse().map(month => {
-      const m = totals(months[month]);
-      return `<tr>
-        <td>${escapeHtml(month)}</td>
-        <td class="amount-positive">${money(m.income)}</td>
-        <td class="amount-negative">${money(m.costs)}</td>
-        <td>${money(m.refunds)}</td>
-        <td class="${m.net < 0 ? "amount-negative" : "amount-positive"}">${money(m.net)}</td>
-      </tr>`;
-    }).join("") || `<tr><td colspan="5" class="empty-cell">No entries in this date range.</td></tr>`;
-  }
-
-  function fillCategories(selected) {
-    const options = CATEGORIES[$("type").value] || CATEGORIES.income;
-    $("category").innerHTML = options.map(c =>
-      `<option ${c === selected ? "selected" : ""}>${escapeHtml(c)}</option>`
-    ).join("");
-  }
-
-  function clearForm() {
-    $("transactionForm").reset();
-    $("recordId").value = "";
-    $("date").value = today();
-    $("quantity").value = "1";
-    $("formHeading").textContent = "Add transaction";
-    fillCategories();
-  }
-
-  function showPage(pageId) {
-    if (pageId !== "dashboard" && !isAdmin) {
-      toast("Admin login required.");
-      pageId = "dashboard";
-    }
-
-    document.querySelectorAll(".page").forEach(p =>
-      p.classList.toggle("active", p.id === pageId)
-    );
-    document.querySelectorAll(".nav-link").forEach(b =>
-      b.classList.toggle("active", b.dataset.page === pageId)
-    );
-
-    const titles = {
-      dashboard: ["Public Dashboard", "A clear overview of server finances."],
-      transactions: ["Transactions", "Manage the finance ledger."],
-      reports: ["Financial Reports", "Review totals by date range."],
-      settings: ["Admin Settings", "Manage backups and notifications."]
-    };
-
-    $("pageTitle").textContent = titles[pageId][0];
-    $("pageSubtitle").textContent = titles[pageId][1];
-    if (pageId === "transactions") renderLedger();
-    if (pageId === "reports") renderReport();
-  }
-
-  function updateAccess() {
-    document.querySelectorAll(".admin-only").forEach(el => el.hidden = !isAdmin);
-    $("loginOpen").hidden = isAdmin;
-    $("logoutButton").hidden = !isAdmin;
-    $("sessionBadge").textContent = isAdmin ? "ADMIN SESSION" : "PUBLIC VIEW";
-    showPage("dashboard");
-  }
-
-  function openLogin() {
-    $("username").value = "";
-    $("password").value = "";
-    $("loginError").hidden = true;
-    $("loginModal").hidden = false;
-    setTimeout(() => $("username").focus(), 50);
-  }
-
-  function closeLogin() {
-    $("loginModal").hidden = true;
-  }
-
-  function editRecord(id) {
-    if (!isAdmin) return;
-    const r = records.find(item => item.id === id);
-    if (!r) return;
-
-    showPage("transactions");
-    $("recordId").value = r.id;
-    $("type").value = r.type;
-    fillCategories(r.category);
-
-    ["date", "description", "amount", "vendor", "reference", "payment", "quantity", "notes"]
-      .forEach(key => $(key).value = r[key] ?? "");
-
-    $("formHeading").textContent = "Edit transaction";
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function downloadFile(filename, contents, mime) {
-    const url = URL.createObjectURL(new Blob([contents], { type: mime }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  function exportCsv(list) {
-    const columns = ["date", "type", "description", "category", "amount",
-      "quantity", "vendor", "reference", "payment", "notes"];
-    const rows = [
-      columns.join(","),
-      ...list.map(r => columns.map(key =>
-        `"${String(r[key] ?? "").replace(/"/g, '""')}"`
-      ).join(","))
-    ];
-    downloadFile(`seraphyx-finance-${today()}.csv`, "\uFEFF" + rows.join("\r\n"), "text/csv;charset=utf-8");
-  }
-
-  async function sendDiscord(record) {
-    if (!settings.enabled || !settings.webhook) return;
-
-    if (!/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[\w.-]+/.test(settings.webhook)) {
-      toast("Saved, but the Discord webhook URL is invalid.");
-      return;
-    }
-
-    const embed = {
-      title: "Seraphyx Finance · Transaction recorded",
-      color: record.type === "income" ? 0x79dfae : 0xbd91dc,
-      fields: [
-        { name: "Type", value: TYPES[record.type], inline: true },
-        { name: "Amount", value: money(record.amount), inline: true },
-        { name: "Date", value: record.date, inline: true },
-        { name: "Description", value: record.description.slice(0, 900) },
-        { name: "Category", value: record.category, inline: true }
-      ],
-      footer: { text: "Seraphyx Finance" }
-    };
-
-    try {
-      const response = await fetch(settings.webhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ embeds: [embed] })
-      });
-      if (!response.ok) throw new Error("Request failed");
-      toast("Transaction saved and Discord notified.");
-    } catch {
-      toast("Saved, but Discord notification failed. Check the webhook.");
-    }
-  }
-
-  // Navigation and login
-  document.querySelectorAll(".nav-link").forEach(button =>
-    button.addEventListener("click", () => showPage(button.dataset.page))
-  );
-  $("loginOpen").addEventListener("click", openLogin);
-  $("closeLogin").addEventListener("click", closeLogin);
-  $("loginModal").addEventListener("click", e => {
-    if (e.target === $("loginModal")) closeLogin();
+  return date.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
   });
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && !$("loginModal").hidden) closeLogin();
+}
+
+function isIncoming(record) {
+  return record.type === "income" || record.type === "refund_received";
+}
+
+function isOutgoing(record) {
+  return !isIncoming(record);
+}
+
+function sum(recordsToSum, predicate) {
+  return recordsToSum
+    .filter(predicate)
+    .reduce((total, record) => total + record.amount, 0);
+}
+
+function totalsFor(source) {
+  const income = sum(source, isIncoming);
+  const outgoing = sum(source, isOutgoing);
+
+  return {
+    income,
+    outgoing,
+    net: income - outgoing,
+    count: source.length,
+    purchases: sum(source, (r) => r.type === "purchase"),
+    expenses: sum(source, (r) =>
+      ["expense", "refund"].includes(r.type)
+    )
+  };
+}
+
+function showNotice(message, isError = false) {
+  const notice = $("notice");
+  if (!notice) return;
+
+  notice.textContent = message;
+  notice.classList.toggle("error", isError);
+  notice.hidden = false;
+
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => {
+    notice.hidden = true;
+  }, 4500);
+}
+
+// -------------------------
+// Access and navigation
+// -------------------------
+
+function updateAccess() {
+  document.querySelectorAll(".admin-only").forEach((element) => {
+    element.hidden = !isAdmin;
   });
 
-  $("loginForm").addEventListener("submit", e => {
-    e.preventDefault();
-    if ($("username").value.trim() !== ADMIN_USERNAME ||
-        $("password").value !== ADMIN_PASSWORD) {
-      $("loginError").hidden = false;
-      $("password").select();
-      return;
+  $("adminBtn").hidden = isAdmin;
+  $("logoutBtn").hidden = !isAdmin;
+
+  $("accessStatus").textContent = isAdmin ? "Admin Access" : "Public View";
+  $("accessDescription").textContent = isAdmin
+    ? "Transaction management enabled"
+    : "Read-only dashboard";
+
+  const dot = document.querySelector(".status-card .status-dot");
+  if (dot) {
+    dot.style.background = isAdmin ? "#c9a0ff" : "";
+    dot.style.boxShadow = isAdmin
+      ? "0 0 11px rgba(201,160,255,.6)" : "";
+  }
+
+  if (!isAdmin && currentPage !== "dashboard") {
+    navigateTo("dashboard");
+  }
+}
+
+function navigateTo(page) {
+  const allowedPages = ["dashboard", "transactions", "reports", "settings"];
+
+  if (!allowedPages.includes(page)) return;
+
+  if (page !== "dashboard" && !isAdmin) {
+    openLogin();
+    showNotice("🔐 Sign in as an administrator to access that page.", true);
+    return;
+  }
+
+  currentPage = page;
+
+  document.querySelectorAll(".page").forEach((section) => {
+    section.classList.toggle("active", section.id === page);
+  });
+
+  document.querySelectorAll("[data-page]").forEach((button) => {
+    if (button.classList.contains("nav-link")) {
+      button.classList.toggle("active", button.dataset.page === page);
     }
+  });
+
+  const titles = {
+    dashboard: ["Dashboard ✨", "Your server finances, beautifully organized."],
+    transactions: ["Transactions 🧾", "Manage the Seraphyx financial ledger."],
+    reports: ["Reports 📈", "Review totals and category breakdowns."],
+    settings: ["Settings ⚙️", "Manage your preferences and data backups."]
+  };
+
+  $("pageTitle").textContent = titles[page][0];
+  $("pageSubtitle").textContent = titles[page][1];
+
+  if (page === "dashboard") renderDashboard();
+  if (page === "transactions") renderLedger();
+  if (page === "reports") renderReport();
+  if (page === "settings") renderSettings();
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function openLogin() {
+  $("loginError").hidden = true;
+  $("loginForm").reset();
+  $("loginModal").hidden = false;
+
+  setTimeout(() => $("username").focus(), 50);
+}
+
+function closeLogin() {
+  $("loginModal").hidden = true;
+}
+
+function logout() {
+  isAdmin = false;
+  closeLogin();
+  $("transactionEditor").hidden = true;
+  $("transactionForm").reset();
+  $("recordId").value = "";
+  updateAccess();
+  navigateTo("dashboard");
+  showNotice("🚪 You have been logged out.");
+}
+
+$("adminBtn").addEventListener("click", openLogin);
+$("closeLoginBtn").addEventListener("click", closeLogin);
+$("logoutBtn").addEventListener("click", logout);
+
+$("loginModal").addEventListener("click", (event) => {
+  if (event.target === $("loginModal")) closeLogin();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("loginModal").hidden) {
+    closeLogin();
+  }
+});
+
+$("loginForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const username = $("username").value.trim();
+  const password = $("password").value;
+
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
     isAdmin = true;
     closeLogin();
     updateAccess();
-    toast("Welcome, KnownAsNeo. Admin panel unlocked.");
+    navigateTo("transactions");
+    showNotice("✨ Welcome, administrator! You now have admin access.");
+  } else {
+    $("loginError").hidden = false;
+    $("password").value = "";
+    $("password").focus();
+  }
+});
+
+document.querySelectorAll("[data-page]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    navigateTo(button.dataset.page);
+  });
+});
+
+// -------------------------
+// Dashboard
+// -------------------------
+
+function setText(id, value) {
+  $(id).textContent = value;
+}
+
+function setAmountClass(element, value) {
+  element.classList.toggle("amount-positive", value > 0);
+  element.classList.toggle("amount-negative", value < 0);
+}
+
+function renderDashboard() {
+  const t = totalsFor(records);
+
+  setText("dashIncome", money(t.income));
+  setText("dashOutgoing", money(t.outgoing));
+  setText("dashNet", money(t.net));
+  setText("dashCount", String(t.count));
+
+  setText("snapshotIncome", money(t.income));
+  setText("snapshotPurchases", money(t.purchases));
+  setText("snapshotExpenses", money(t.expenses));
+  setText("snapshotNet", money(t.net));
+  setAmountClass($("dashNet"), t.net);
+  setAmountClass($("snapshotNet"), t.net);
+
+  const recent = [...records]
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+    .slice(0, 6);
+
+  $("recentRows").innerHTML = recent.map((r) => `
+    <tr>
+      <td>${escapeHTML(r.description)}</td>
+      <td>${escapeHTML(r.category)}</td>
+      <td>${escapeHTML(formatDate(r.date))}</td>
+      <td class="align-right ${isIncoming(r) ? "amount-positive" : "amount-negative"}">
+        ${isIncoming(r) ? "+" : "−"}${escapeHTML(money(r.amount))}
+      </td>
+    </tr>
+  `).join("");
+
+  $("recentEmpty").hidden = recent.length > 0;
+}
+
+// -------------------------
+// Transaction management
+// -------------------------
+
+function openTransactionEditor(record = null) {
+  if (!isAdmin) {
+    openLogin();
+    return;
+  }
+
+  $("transactionForm").reset();
+  $("recordId").value = record?.id || "";
+  $("type").value = record?.type || "income";
+  $("date").value = record?.date || dateToday();
+  $("description").value = record?.description || "";
+  $("category").value = record?.category || "";
+  $("amount").value = record?.amount ?? "";
+  $("vendor").value = record?.vendor || "";
+  $("reference").value = record?.reference || "";
+  $("payment").value = record?.payment || "Not specified";
+  $("quantity").value = record?.quantity ?? "";
+  $("notes").value = record?.notes || "";
+
+  $("formTitle").textContent = record ? "✏️ Edit transaction" : "✨ Add transaction";
+  $("transactionEditor").hidden = false;
+  $("transactionEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("description").focus();
+}
+
+function closeTransactionEditor() {
+  $("transactionEditor").hidden = true;
+  $("transactionForm").reset();
+  $("recordId").value = "";
+}
+
+$("newTransactionBtn").addEventListener("click", () => openTransactionEditor());
+$("cancelTransactionBtn").addEventListener("click", closeTransactionEditor);
+$("discardBtn").addEventListener("click", closeTransactionEditor);
+
+$("transactionForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  if (!isAdmin) {
+    showNotice("Admin access is required to save transactions.", true);
+    return;
+  }
+
+  const amount = Number($("amount").value);
+  const quantity = $("quantity").value
+    ? Number($("quantity").value) : null;
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    showNotice("Enter an amount greater than zero.", true);
+    return;
+  }
+
+  if (quantity !== null &&
+      (!Number.isInteger(quantity) || quantity < 1)) {
+    showNotice("Quantity must be a positive whole number.", true);
+    return;
+  }
+
+  const existingId = $("recordId").value;
+  const existing = records.find((r) => r.id === existingId);
+
+  const record = {
+    id: existingId || (
+      window.crypto?.randomUUID?.() ||
+      `record-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    ),
+    type: $("type").value,
+    date: $("date").value,
+    description: $("description").value.trim(),
+    category: $("category").value.trim(),
+    amount: Math.round(amount * 100) / 100,
+    vendor: $("vendor").value.trim(),
+    reference: $("reference").value.trim(),
+    payment: $("payment").value,
+    quantity,
+    notes: $("notes").value.trim(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!record.description || !record.category || !record.date) {
+    showNotice("Please complete the required fields.", true);
+    return;
+  }
+
+  if (existing) {
+    records = records.map((r) => r.id === existingId ? record : r);
+  } else {
+    records.push(record);
+  }
+
+  if (!saveRecords()) return;
+
+  closeTransactionEditor();
+  renderAll();
+  showNotice(existing ? "✏️ Transaction updated." : "💜 Transaction saved.");
+
+  sendWebhookNotification(record).catch(() => {
+    // Notification failure should not undo a successfully saved transaction.
+  });
+});
+
+function renderLedger() {
+  const search = $("ledgerSearch").value.trim().toLowerCase();
+  const type = $("ledgerType").value;
+
+  const filtered = [...records]
+    .filter((r) => type === "all" || r.type === type)
+    .filter((r) => [
+      r.description, r.category, r.vendor, r.reference, r.notes, r.payment
+    ].some((value) => String(value || "").toLowerCase().includes(search)))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+  $("ledgerRows").innerHTML = filtered.map((r) => `
+    <tr>
+      <td>${escapeHTML(formatDate(r.date))}</td>
+      <td>
+        <strong>${escapeHTML(r.description)}</strong>
+        ${r.vendor ? `<div class="muted-cell">${escapeHTML(r.vendor)}</div>` : ""}
+      </td>
+      <td><span class="type-badge">${escapeHTML(TYPE_LABELS[r.type])}</span></td>
+      <td>${escapeHTML(r.category)}</td>
+      <td class="align-right ${isIncoming(r) ? "amount-positive" : "amount-negative"}">
+        ${isIncoming(r) ? "+" : "−"}${escapeHTML(money(r.amount))}
+      </td>
+      <td>
+        <div class="row-actions">
+          <button type="button" data-edit="${escapeHTML(r.id)}">✏️ Edit</button>
+          <button type="button" class="delete-row" data-delete="${escapeHTML(r.id)}">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+
+  $("ledgerEmpty").hidden = filtered.length > 0;
+}
+
+$("ledgerSearch").addEventListener("input", renderLedger);
+$("ledgerType").addEventListener("change", renderLedger);
+
+$("ledgerRows").addEventListener("click", (event) => {
+  if (!isAdmin) return;
+
+  const editButton = event.target.closest("[data-edit]");
+  const deleteButton = event.target.closest("[data-delete]");
+
+  if (editButton) {
+    const record = records.find((r) => r.id === editButton.dataset.edit);
+    if (record) openTransactionEditor(record);
+  }
+
+  if (deleteButton) {
+    deleteRecord(deleteButton.dataset.delete);
+  }
+});
+
+function deleteRecord(id) {
+  if (!isAdmin) return;
+
+  const record = records.find((r) => r.id === id);
+  if (!record) return;
+
+  if (!confirm(`Delete "${record.description}"? This cannot be undone unless backed up.`)) {
+    return;
+  }
+
+  records = records.filter((r) => r.id !== id);
+  if (!saveRecords()) return;
+
+  renderAll();
+  showNotice("🗑️ Transaction deleted.");
+}
+
+// -------------------------
+// Reports
+// -------------------------
+
+function getReportRecords() {
+  const from = $("reportFrom").value;
+  const to = $("reportTo").value;
+
+  if (from && to && from > to) {
+    showNotice("The start date must be on or before the end date.", true);
+    return null;
+  }
+
+  return records.filter((r) =>
+    (!from || r.date >= from) &&
+    (!to || r.date <= to)
+  );
+}
+
+function renderReport() {
+  const filtered = getReportRecords();
+  if (!filtered) return;
+
+  const t = totalsFor(filtered);
+
+  setText("reportIncome", money(t.income));
+  setText("reportOutgoing", money(t.outgoing));
+  setText("reportNet", money(t.net));
+  setText("reportCount", String(t.count));
+  setAmountClass($("reportNet"), t.net);
+
+  const categoryTotals = new Map();
+
+  filtered.filter(isOutgoing).forEach((r) => {
+    const category = r.category || "Uncategorized";
+    categoryTotals.set(
+      category,
+      (categoryTotals.get(category) || 0) + r.amount
+    );
   });
 
-  $("logoutButton").addEventListener("click", () => {
-    isAdmin = false;
-    updateAccess();
-    toast("You have been logged out.");
-  });
+  const sorted = [...categoryTotals.entries()]
+    .sort((a, b) => b[1] - a[1]);
 
-  // Transaction form
-  $("type").addEventListener("change", () => fillCategories());
-  $("cancelForm").addEventListener("click", clearForm);
-  $("newTransaction").addEventListener("click", () => {
-    clearForm();
-    $("description").focus();
-  });
+  const max = Math.max(...sorted.map((entry) => entry[1]), 1);
 
-  $("transactionForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    if (!isAdmin) return toast("Admin login required.");
+  $("categoryBreakdown").innerHTML = sorted.map(([category, amount]) => `
+    <div class="breakdown-item">
+      <span>${escapeHTML(category)}</span>
+      <div class="breakdown-track">
+        <div class="breakdown-fill" style="width:${Math.min(100, amount / max * 100)}%"></div>
+      </div>
+      <strong>${escapeHTML(money(amount))}</strong>
+    </div>
+  `).join("");
 
-    const amount = Number($("amount").value);
-    const quantity = Number($("quantity").value || 1);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > 1e9 ||
-        !Number.isInteger(quantity) || quantity < 1) {
-      return toast("Enter a valid amount and quantity.");
-    }
+  $("breakdownEmpty").hidden = sorted.length > 0;
+}
 
-    const oldId = $("recordId").value;
-    const old = records.find(r => r.id === oldId);
-    const record = {
-      id: oldId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
-      type: $("type").value,
-      date: $("date").value,
-      description: $("description").value.trim(),
-      category: $("category").value,
-      amount: Math.round(amount * 100) / 100,
-      quantity,
-      vendor: $("vendor").value.trim(),
-      reference: $("reference").value.trim(),
-      payment: $("payment").value,
-      notes: $("notes").value.trim(),
-      createdAt: old?.createdAt || Date.now()
-    };
+$("runReportBtn").addEventListener("click", renderReport);
 
-    if (!record.date || !record.description) return toast("Complete all required fields.");
+$("clearReportBtn").addEventListener("click", () => {
+  $("reportFrom").value = "";
+  $("reportTo").value = "";
+  renderReport();
+});
 
-    if (old) records = records.map(r => r.id === oldId ? record : r);
-    else records.push(record);
+// -------------------------
+// CSV export
+// -------------------------
 
-    if (!saveRecords()) return;
-    clearForm();
-    render();
-    toast(old ? "Transaction updated." : "Transaction saved.");
-    if (!old) await sendDiscord(record);
-  });
+function csvEscape(value) {
+  const string = String(value ?? "");
+  return `"${string.replace(/"/g, '""')}"`;
+}
 
-  ["searchLedger", "filterType", "filterFrom", "filterTo"].forEach(id =>
-    $(id).addEventListener("input", renderLedger)
+function downloadBlob(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportCsv(source, filename) {
+  if (!isAdmin) {
+    showNotice("Admin access is required to export records.", true);
+    return;
+  }
+
+  const header = [
+    "Date", "Description", "Type", "Category", "Amount",
+    "Vendor", "Reference", "Payment", "Quantity", "Notes"
+  ];
+
+  const rows = source.map((r) => [
+    r.date,
+    r.description,
+    TYPE_OPTIONS[r.type] || r.type,
+    r.category,
+    r.amount.toFixed(2),
+    r.vendor,
+    r.reference,
+    r.payment,
+    r.quantity ?? "",
+    r.notes
+  ]);
+
+  // UTF-8 BOM helps spreadsheet programs open the file correctly.
+  const csv = "\uFEFF" + [header, ...rows]
+    .map((row) => row.map(csvEscape).join(","))
+    .join("\r\n");
+
+  downloadBlob(csv, filename, "text/csv;charset=utf-8");
+  showNotice("📥 CSV export downloaded.");
+}
+
+$("exportCsvBtn").addEventListener("click", () => {
+  exportCsv(records, "seraphyx-transactions.csv");
+});
+
+$("reportCsvBtn").addEventListener("click", () => {
+  const filtered = getReportRecords();
+  if (filtered) exportCsv(filtered, "seraphyx-finance-report.csv");
+});
+
+// -------------------------
+// Settings and backups
+// -------------------------
+
+function renderSettings() {
+  $("currency").value = settings.currency;
+  $("webhookUrl").value = settings.webhookUrl;
+}
+
+$("saveSettingsBtn").addEventListener("click", () => {
+  if (!isAdmin) return;
+
+  settings.currency = $("currency").value;
+
+  if (saveSettings()) {
+    document.querySelectorAll(".currencyLabel").forEach((el) => {
+      el.textContent = settings.currency;
+    });
+
+    renderAll();
+    showNotice("⚙️ Currency preference saved.");
+  }
+});
+
+$("saveWebhookBtn").addEventListener("click", () => {
+  if (!isAdmin) return;
+
+  const value = $("webhookUrl").value.trim();
+
+  if (value && !/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[^/\s]+\/?$/.test(value)) {
+    showNotice("Enter a valid Discord webhook URL, or leave the field empty.", true);
+    return;
+  }
+
+  settings.webhookUrl = value;
+
+  if (saveSettings()) {
+    showNotice("🔔 Webhook setting saved.");
+  }
+});
+
+function exportBackup() {
+  if (!isAdmin) return;
+
+  const backup = {
+    application: "Seraphyx Finance",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    records,
+    settings
+  };
+
+  downloadBlob(
+    JSON.stringify(backup, null, 2),
+    `seraphyx-backup-${dateToday()}.json`,
+    "application/json"
   );
 
-  document.addEventListener("click", e => {
-    const edit = e.target.closest("[data-edit]");
-    const del = e.target.closest("[data-delete]");
+  showNotice("💾 JSON backup downloaded.");
+}
 
-    if (edit && isAdmin) editRecord(edit.dataset.edit);
+$("backupBtn").addEventListener("click", exportBackup);
 
-    if (del && isAdmin) {
-      const record = records.find(r => r.id === del.dataset.delete);
-      if (record && confirm(`Delete "${record.description}" (${money(record.amount)})?`)) {
-        records = records.filter(r => r.id !== record.id);
-        if (saveRecords()) {
-          render();
-          toast("Transaction deleted.");
-        }
+$("restoreFile").addEventListener("change", async (event) => {
+  if (!isAdmin) return;
+
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error("Backup file is too large (maximum 10 MB).");
+    }
+
+    const parsed = JSON.parse(await file.text());
+    const incomingRecords = Array.isArray(parsed) ? parsed : parsed.records;
+
+    if (!Array.isArray(incomingRecords)) {
+      throw new Error("This file does not contain a valid transaction list.");
+    }
+
+    const allowedTypes = Object.keys(TYPE_LABELS);
+    const cleanRecords = incomingRecords.map((r) => {
+      if (!r || typeof r !== "object") {
+        throw new Error("A transaction entry is invalid.");
+      }
+
+      const amount = Number(r.amount);
+      if (
+        !allowedTypes.includes(r.type) ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        typeof r.description !== "string" ||
+        typeof r.category !== "string" ||
+        typeof r.date !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(r.date)
+      ) {
+        throw new Error("A transaction has invalid or missing fields.");
+      }
+
+      return {
+        id: typeof r.id === "string" && r.id
+          ? r.id : `restored-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type: r.type,
+        date: r.date,
+        description: r.description.slice(0, 120),
+        category: r.category.slice(0, 60),
+        amount: Math.round(amount * 100) / 100,
+        vendor: String(r.vendor || "").slice(0, 100),
+        reference: String(r.reference || "").slice(0, 100),
+        payment: String(r.payment || "Not specified").slice(0, 50),
+        quantity: Number.isInteger(Number(r.quantity)) && Number(r.quantity) > 0
+          ? Number(r.quantity) : null,
+        notes: String(r.notes || "").slice(0, 1000),
+        createdAt: r.createdAt || new Date().toISOString(),
+        updatedAt: r.updatedAt || new Date().toISOString()
+      };
+    });
+
+    if (!confirm(`Restore ${cleanRecords.length} transactions? This replaces the current transaction list.`)) {
+      return;
+    }
+
+    const previousRecords = records;
+    records = cleanRecords;
+
+    if (!saveRecords()) {
+      records = previousRecords;
+      return;
+    }
+
+    if (parsed && !Array.isArray(parsed) && parsed.settings) {
+      const currency = parsed.settings.currency;
+      if (["PHP", "USD", "EUR", "SGD"].includes(currency)) {
+        settings.currency = currency;
+        saveSettings();
       }
     }
-  });
 
-  $("exportCsv").addEventListener("click", () => {
-    if (isAdmin) exportCsv(filteredRecords());
-  });
-  $("reportCsv").addEventListener("click", () => {
-    if (isAdmin) exportCsv(reportRecords);
-  });
-  $("generateReport").addEventListener("click", renderReport);
-  ["reportFrom", "reportTo", "reportType"].forEach(id =>
-    $(id).addEventListener("change", renderReport)
+    renderAll();
+    showNotice(`💾 Restored ${records.length} transactions.`);
+  } catch (error) {
+    showNotice(error.message || "Unable to restore this backup.", true);
+  } finally {
+    event.target.value = "";
+  }
+});
+
+$("clearRecordsBtn").addEventListener("click", () => {
+  if (!isAdmin) return;
+
+  const confirmation = prompt(
+    'This permanently removes all locally saved transactions. Type DELETE to confirm.'
   );
 
-  // Settings and backups
-  $("webhook").value = settings.webhook;
-  $("discordEnabled").checked = settings.enabled;
+  if (confirmation !== "DELETE") {
+    showNotice("Deletion cancelled.");
+    return;
+  }
 
-  $("discordForm").addEventListener("submit", e => {
-    e.preventDefault();
-    if (!isAdmin) return;
-    settings = {
-      webhook: $("webhook").value.trim(),
-      enabled: $("discordEnabled").checked
-    };
-    if (settings.enabled && !settings.webhook) {
-      return toast("Enter a webhook URL or disable notifications.");
-    }
-    if (saveSettings()) toast("Discord settings saved.");
+  records = [];
+  if (!saveRecords()) return;
+
+  renderAll();
+  showNotice("🗑️ All transactions have been removed.");
+});
+
+// -------------------------
+// Optional Discord webhook
+// -------------------------
+
+async function sendWebhookNotification(record) {
+  const url = settings.webhookUrl;
+  if (!url) return;
+
+  // Revalidate the stored value before using it.
+  if (!/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[^/\s]+\/?$/.test(url)) {
+    return;
+  }
+
+  const payload = {
+    username: "Seraphyx Finance",
+    embeds: [{
+      title: "🧾 Transaction recorded",
+      color: isIncoming(record) ? 0x80E8BD : 0xB48BCF,
+      fields: [
+        { name: "Description", value: record.description.slice(0, 200), inline: true },
+        { name: "Type", value: TYPE_OPTIONS[record.type], inline: true },
+        { name: "Amount", value: money(record.amount), inline: true },
+        { name: "Category", value: record.category.slice(0, 100), inline: true },
+        { name: "Date", value: record.date, inline: true }
+      ],
+      footer: { text: "Seraphyx Finance • Private admin notification" },
+      timestamp: new Date().toISOString()
+    }]
+  };
+
+  // Browser requests may be blocked by Discord CORS policy.
+  // For production, send notifications through a secure server instead.
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.warn("Discord notification could not be sent.", error);
+  }
+}
+
+// -------------------------
+// Dynamic animated background
+// -------------------------
+
+function createBackground() {
+  const particleContainer = $("particles");
+  const emojiContainer = $("floatingEmojis");
+
+  if (!particleContainer || !emojiContainer) return;
+
+  particleContainer.replaceChildren();
+  emojiContainer.replaceChildren();
+
+  for (let i = 0; i < 65; i++) {
+    const particle = document.createElement("span");
+    particle.className = "particle";
+    particle.style.left = `${Math.random() * 100}%`;
+    particle.style.top = `${Math.random() * 100}%`;
+    particle.style.setProperty("--duration", `${3 + Math.random() * 6}s`);
+    particle.style.animationDelay = `${Math.random() * -8}s`;
+    particleContainer.appendChild(particle);
+  }
+
+  const emojis = ["💸", "💎", "💰", "✨", "📈", "🪙", "🌙", "✦", "💜"];
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (reducedMotion) return;
+
+  function spawnEmoji() {
+    const emoji = document.createElement("span");
+    emoji.className = "floating-emoji";
+    emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    emoji.style.left = `${Math.random() * 100}%`;
+    emoji.style.setProperty("--size", `${15 + Math.random() * 19}px`);
+    emoji.style.setProperty("--duration", `${14 + Math.random() * 15}s`);
+    emoji.style.setProperty("--drift", `${Math.round(Math.random() * 140 - 70)}px`);
+
+    emojiContainer.appendChild(emoji);
+
+    setTimeout(() => emoji.remove(), 30000);
+  }
+
+  for (let i = 0; i < 10; i++) {
+    setTimeout(spawnEmoji, i * 700);
+  }
+
+  setInterval(spawnEmoji, 1500);
+}
+
+// -------------------------
+// Initialize
+// -------------------------
+
+function renderAll() {
+  renderDashboard();
+
+  if (isAdmin) {
+    renderLedger();
+    renderReport();
+    renderSettings();
+  }
+
+  document.querySelectorAll(".currencyLabel").forEach((el) => {
+    el.textContent = settings.currency;
   });
+}
 
-  $("testWebhook").addEventListener("click", async () => {
-    if (!isAdmin) return;
-    const webhook = $("webhook").value.trim();
-    if (!/^https:\/\/discord\.com\/api\/webhooks\/\d+\/[\w.-]+/.test(webhook)) {
-      return toast("Enter a valid Discord webhook URL.");
-    }
-    try {
-      const response = await fetch(webhook, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: "✦ Seraphyx Finance test notification." })
-      });
-      if (!response.ok) throw new Error();
-      toast("Test notification sent.");
-    } catch {
-      toast("Test failed. Check the webhook URL and browser restrictions.");
-    }
-  });
+function initialize() {
+  $("date").value = dateToday();
 
-  $("backupJson").addEventListener("click", () => {
-    if (!isAdmin) return;
-    downloadFile("seraphyx-finance-backup.json", JSON.stringify({
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      records,
-      settings
-    }, null, 2), "application/json");
-  });
-
-  $("restoreJson").addEventListener("click", () => {
-    if (isAdmin) $("restoreFile").click();
-  });
-
-  $("restoreFile").addEventListener("change", async e => {
-    if (!isAdmin) return;
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      const backup = JSON.parse(await file.text());
-      if (!backup || !Array.isArray(backup.records) ||
-          !backup.records.every(validRecord)) {
-        throw new Error("Invalid backup format.");
-      }
-      if (!confirm(`Replace current records with ${backup.records.length} imported records?`)) return;
-
-      records = backup.records;
-      if (backup.settings && typeof backup.settings === "object") {
-        settings = {
-          webhook: typeof backup.settings.webhook === "string" ? backup.settings.webhook : "",
-          enabled: backup.settings.enabled === true
-        };
-      }
-
-      if (saveRecords() && saveSettings()) {
-        $("webhook").value = settings.webhook;
-        $("discordEnabled").checked = settings.enabled;
-        render();
-        toast("Backup imported successfully.");
-      }
-    } catch (error) {
-      toast(`Import failed: ${error.message}`);
-    } finally {
-      e.target.value = "";
-    }
-  });
-
-  $("deleteAll").addEventListener("click", () => {
-    if (!isAdmin) return;
-    if (confirm("Delete every transaction in this browser? Export a backup first if needed.")) {
-      records = [];
-      if (saveRecords()) {
-        render();
-        toast("All transaction records deleted.");
-      }
-    }
-  });
-
-  // Initial setup
-  $("currentDate").textContent = new Date().toLocaleDateString("en-PH", {
-    year: "numeric", month: "short", day: "numeric"
-  });
-  $("date").value = today();
-  $("reportFrom").value = `${today().slice(0, 7)}-01`;
-  $("reportTo").value = today();
-  fillCategories();
-  render();
   updateAccess();
-})();
+  renderAll();
+  createBackground();
 
+  // The page always starts in public view.
+  // Admin access is granted only after the login form succeeds.
+  navigateTo("dashboard");
+}
+
+initialize();
