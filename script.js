@@ -13,7 +13,7 @@
 
 // Change these demo credentials before testing.
 const ADMIN_USERNAME = "KnownAsNeo";
-const ADMIN_PASSWORD = "ChangeMe123!";
+const ADMIN_PASSWORD = "natnat123213123";
 
 const RECORDS_KEY = "seraphyx.finance.records.v2";
 const SETTINGS_KEY = "seraphyx.finance.settings.v2";
